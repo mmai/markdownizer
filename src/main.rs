@@ -2,6 +2,7 @@ use std::{env, fs, error};
 use clap::{Arg, App, SubCommand};
 use std::io::Read;
 
+mod types;
 mod parser;
 
 // use parser::hello_parser;
@@ -45,7 +46,6 @@ fn get_current_dir() -> String {
 
 fn traverse(root: &str) -> Result<(), std::io::Error> {
 // fn traverse(root: &str) -> Result<(), Box<dyn error::Error>> {
-    println!("Files:");
     let path = std::path::PathBuf::from(root);
     let path = path.as_path();
     for entry in fs::read_dir(path)? {
@@ -58,8 +58,9 @@ fn traverse(root: &str) -> Result<(), std::io::Error> {
         file.read_to_string(&mut s)?; 
         // let (_, project) = parser::project(&s)?;
         match parser::project(&s) {
-            Ok((_, project)) => println!("{:?}", project),
-            _ => println!("Not a project: {:?}", path)
+            Ok((_, project)) => println!("{} ({})", project.title, project.tasks.len()),
+            e => println!("Not a project: {:?}", path)
+            // e => println!("Not a project: {:?} {:?}", path, e)
         }
 
         // println!("{:?}", );

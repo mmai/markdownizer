@@ -1,20 +1,26 @@
-use nom::{combinator, bytes};
+use crate::types::{Project, Task};
 
 #[derive(Clone, Default, Debug, PartialEq)]
-pub struct Project {
-    pub title: std::string::String,
-    // pub device: std::string::String,
-    // pub mount_point: std::string::String,
-    // pub file_system_type: std::string::String,
-    // pub options: std::vec::Vec<std::string::String>,
+pub struct MetaData {
+    pub status: std::string::String,
+    pub tags: std::vec::Vec<std::string::String>,
 }
+
+use nom::{multi, character, combinator};
+// use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime};
 
 pub fn project(input: &str) -> nom::IResult<&str, Project> {
+    let (input, meta) = combinator::opt(parsers::front_matter)(input)?;
+    let (input, _) = multi::many0(character::complete::line_ending)(input)?;
     let (input, title) = parsers::title(input)?;
-    Ok((input, Project { title: title.into() }))
-    // combinator::map(bytes::complete::is_not("\r\n"), |str: &str| Project {title: str.into()})(i)
+    let (input, description) = parsers::description(input)?;
+    let (input, tasks) = parsers::tasks(input)?;
+    Ok((input, Project {
+        title: title.into(),
+        status: meta.map(|m| m.status).unwrap_or("maybe".into()),
+        tasks: tasks
+    }))
 }
-
 
 // pub fn projects() -> Result<(), std::boxed::Box<dyn std::error::Error>> {
 // 	let file = std::fs::File::open("/proc/mounts")?;
@@ -31,8 +37,73 @@ pub fn project(input: &str) -> nom::IResult<&str, Project> {
 // }
 
 pub(self) mod parsers {
-    use nom::{combinator, bytes, branch, character};
-    use super::Project;
+    use nom::{combinator, bytes, branch, character, sequence, multi};
+    use super::{MetaData, Task};
+    use yaml_rust::{YamlLoader};
+
+    fn yaml_delimiter(input: &str) -> nom::IResult<&str, ()> {
+        let (input, _) = combinator::opt(character::complete::line_ending)(input)?;
+        let (input, _) = bytes::complete::tag("---")(input)?;
+        let (input, _) = character::complete::line_ending(input)?;
+        Ok((input, ()))
+    }
+
+    pub fn front_matter(input: &str) -> nom::IResult<&str, MetaData> {
+        let (input, yaml) = sequence::delimited( yaml_delimiter, 
+                                                 bytes::complete::take_until("\n---"), 
+                                                 yaml_delimiter
+        )(input)?;
+        let docs = YamlLoader::load_from_str(yaml).unwrap();
+        let doc = &docs[0];
+
+        // println!("debug {:?}", doc);
+        let metadata = MetaData {
+            status: doc["status"].as_str().unwrap().into(),
+            tags: vec![]
+        };
+        Ok((input, metadata))
+    }
+
+    pub fn description(input: &str) -> nom::IResult<&str, String> {
+        let (input, description) = bytes::complete::take_until("\n## ")(input)?;
+        Ok((input, description.into()))
+    }
+
+    fn task_status(input: &str) -> nom::IResult<&str, bool> {
+        branch::alt((
+            combinator::value(true, bytes::complete::tag("[x] ")),
+            combinator::value(false, combinator::opt(bytes::complete::tag("[ ] ")))
+        ))(input)
+    }
+
+    fn task(level: usize) -> impl Fn(&str) -> nom::IResult<&str, Task>
+    {
+        move |input: &str| {
+            let (input, _) = multi::many_m_n(level, level, bytes::complete::tag("  "))(input)?;
+            let (input, _) = bytes::complete::tag("* ")(input)?;
+            let (input, done) = task_status(input)?;
+            let (input, title) = character::complete::not_line_ending(input)?;
+            let (input, _) = character::complete::line_ending(input)?;
+            let (input, tasks) = multi::many0(task(level + 1))(input)?;
+            let task = Task {
+                title: title.into(),
+                done: done,
+                time_spent: 0,
+                time_estimate: 0,
+                tasks: tasks,
+            };
+            Ok((input, task))
+        }
+
+    }
+
+    pub fn tasks(input: &str) -> nom::IResult<&str, Vec<Task>> {
+        let (input, _) = combinator::opt(character::complete::line_ending)(input)?;
+        let (input, _) = bytes::complete::tag("## Tasks")(input)?;
+        let (input, _) = multi::many1(character::complete::line_ending)(input)?;
+        let (input, tasks) = multi::many0(task(0))(input)?;
+        Ok((input, tasks))
+    }
 
     fn title_hash(input: &str) -> nom::IResult<&str, &str> {
         let (input, _) = bytes::complete::tag("#")(input)?;
@@ -77,6 +148,39 @@ pub(self) mod parsers {
         }
 
         #[test]
+        fn test_front_matter() {
+            let meta = "---\nstatus: bbo\ntags:\n---\no";
+            assert_eq!(front_matter(meta), Ok(("o", MetaData {status: "bbo".into(), tags: vec![]})));
+        }
+
+        #[test]
+        fn test_task() {
+            let taskstr = "* principale\n  * [ ] sous 1\n  * [x] sous 2\n* une autre";
+            assert_eq!(task(0)(taskstr), Ok(("* une autre", Task {
+                title: "principale".into(),
+                done: false,
+                time_spent:0,
+                time_estimate:0,
+                tasks: vec![
+                    Task {
+                        title: "sous 1".into(),
+                        done: false,
+                        time_spent:0,
+                        time_estimate:0,
+                        tasks: vec![]
+                    },
+                    Task {
+                        title: "sous 2".into(),
+                        done: true,
+                        time_spent:0,
+                        time_estimate:0,
+                        tasks: vec![]
+                    }
+                ]
+            })));
+        }
+
+        #[test]
         fn test_title() {
             assert_eq!(title("# toto\n"), Ok(("", "toto")));
             assert_eq!(title("toto\n===\naaa"), Ok(("aaa", "toto")));
@@ -90,7 +194,63 @@ mod tests {
 
     #[test]
     fn test_project() {
-        assert_eq!(project("# abcd\nefg"), Ok(("efg", Project { title: "abcd".into() })));
-        assert_eq!(project("abcd\n===\n"), Ok(("", Project { title: "abcd".into() })));
+        let input = "
+---
+status: active
+---
+
+Lectures liens
+==============
+
+## Tasks
+
+* taguer liens nons tagués
+  * toread, reference
+  * catégories
+* compteur liens à lire
+* migration wallabag ?
+";
+        assert_eq!(project(input), Ok(("", Project {
+            title: "Lectures liens".into(),
+            status: "active".into(),
+            tasks: vec![
+                Task {
+                    title: "taguer liens nons tagués".into(),
+                    done: false,
+                    time_spent:0,
+                    time_estimate:0,
+                    tasks: vec![
+                        Task {
+                            title: "toread, reference".into(),
+                            done: false,
+                            time_spent:0,
+                            time_estimate:0,
+                            tasks: vec![]
+                        },
+                        Task {
+                            title: "catégories".into(),
+                            done: false,
+                            time_spent:0,
+                            time_estimate:0,
+                            tasks: vec![]
+                        }
+                    ]
+                },
+                Task {
+                    title: "compteur liens à lire".into(),
+                    done: false,
+                    time_spent:0,
+                    time_estimate:0,
+                    tasks: vec![]
+                },
+                Task {
+                    title: "migration wallabag ?".into(),
+                    done: false,
+                    time_spent:0,
+                    time_estimate:0,
+                    tasks: vec![]
+                },
+            ]
+        })));
     }
 }
