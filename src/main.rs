@@ -59,7 +59,7 @@ fn traverse(root: &str) -> Result<(), std::io::Error> {
         // let (_, project) = parser::project(&s)?;
         match parser::project(&s) {
             Ok((_, project)) => println!("{} ({})", project.title, project.tasks.len()),
-            e => println!("Not a project: {:?}", path)
+            e => println!("Not a project: {:?} {:?}", path, e)
             // e => println!("Not a project: {:?} {:?}", path, e)
         }
 

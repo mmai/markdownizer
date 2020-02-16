@@ -76,12 +76,33 @@ pub(self) mod parsers {
         ))(input)
     }
 
+    fn task_estimate(input: &str) -> nom::IResult<&str, usize> {
+        let (input, estimate_val) = character::complete::digit1(input)?;
+        let (input, estimate_unit) = branch::alt((
+                bytes::complete::tag("j"),
+                bytes::complete::tag("d"),
+                bytes::complete::tag("h"),
+                bytes::complete::tag("mn"),
+        ))(input)?;
+        let (input, _) = bytes::complete::tag(" ")(input)?;
+        let multiplicator = match estimate_unit {
+            "j" => 24 * 60,
+            "d" => 24 * 60,
+            "h" => 60,
+            "mn" => 1,
+            _ => 0
+        };
+        let estimate_val: usize = estimate_val.parse().unwrap();
+        Ok((input, estimate_val * multiplicator))
+    }
+
     fn task(level: usize) -> impl Fn(&str) -> nom::IResult<&str, Task>
     {
         move |input: &str| {
             let (input, _) = multi::many_m_n(level, level, bytes::complete::tag("  "))(input)?;
             let (input, _) = bytes::complete::tag("* ")(input)?;
             let (input, done) = task_status(input)?;
+            let (input, time_estimate) = combinator::opt(task_estimate)(input)?;
             let (input, title) = character::complete::not_line_ending(input)?;
             let (input, _) = character::complete::line_ending(input)?;
             let (input, tasks) = multi::many0(task(level + 1))(input)?;
@@ -89,7 +110,7 @@ pub(self) mod parsers {
                 title: title.into(),
                 done: done,
                 time_spent: 0,
-                time_estimate: 0,
+                time_estimate: time_estimate,
                 tasks: tasks,
             };
             Ok((input, task))
@@ -160,20 +181,20 @@ pub(self) mod parsers {
                 title: "principale".into(),
                 done: false,
                 time_spent:0,
-                time_estimate:0,
+                time_estimate:None,
                 tasks: vec![
                     Task {
                         title: "sous 1".into(),
                         done: false,
                         time_spent:0,
-                        time_estimate:0,
+                        time_estimate:None,
                         tasks: vec![]
                     },
                     Task {
                         title: "sous 2".into(),
                         done: true,
                         time_spent:0,
-                        time_estimate:0,
+                        time_estimate:None,
                         tasks: vec![]
                     }
                 ]
@@ -204,7 +225,7 @@ Lectures liens
 
 ## Tasks
 
-* taguer liens nons tagués
+* 1h taguer liens nons tagués
   * toread, reference
   * catégories
 * compteur liens à lire
@@ -218,20 +239,20 @@ Lectures liens
                     title: "taguer liens nons tagués".into(),
                     done: false,
                     time_spent:0,
-                    time_estimate:0,
+                    time_estimate:Some(60),
                     tasks: vec![
                         Task {
                             title: "toread, reference".into(),
                             done: false,
                             time_spent:0,
-                            time_estimate:0,
+                            time_estimate:None,
                             tasks: vec![]
                         },
                         Task {
                             title: "catégories".into(),
                             done: false,
                             time_spent:0,
-                            time_estimate:0,
+                            time_estimate:None,
                             tasks: vec![]
                         }
                     ]
@@ -240,14 +261,14 @@ Lectures liens
                     title: "compteur liens à lire".into(),
                     done: false,
                     time_spent:0,
-                    time_estimate:0,
+                    time_estimate:None,
                     tasks: vec![]
                 },
                 Task {
                     title: "migration wallabag ?".into(),
                     done: false,
                     time_spent:0,
-                    time_estimate:0,
+                    time_estimate:None,
                     tasks: vec![]
                 },
             ]

@@ -12,6 +12,6 @@ pub struct Task {
     pub title: std::string::String,
     pub done: bool,
     pub time_spent: u32,
-    pub time_estimate: u32,
+    pub time_estimate: Option<usize>,
     pub tasks: Vec<Task>,
 }
