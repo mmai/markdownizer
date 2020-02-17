@@ -1,8 +1,8 @@
-use crate::types::{Project, Task};
+use crate::types::{Project, Task, Status};
 
-#[derive(Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MetaData {
-    pub status: std::string::String,
+    pub status: Option<Status>,
     pub tags: std::vec::Vec<std::string::String>,
 }
 
@@ -13,12 +13,12 @@ pub fn project(input: &str) -> nom::IResult<&str, Project> {
     let (input, meta) = combinator::opt(parsers::front_matter)(input)?;
     let (input, _) = multi::many0(character::complete::line_ending)(input)?;
     let (input, title) = parsers::title(input)?;
-    let (input, description) = parsers::description(input)?;
+    let (input, _description) = parsers::description(input)?;
     let (input, tasks) = parsers::tasks(input)?;
     Ok((input, Project {
         title: title.into(),
-        status: meta.map(|m| m.status).unwrap_or("maybe".into()),
-        tasks: tasks
+        status: meta.map(|m| m.status).unwrap_or(Some(Status::Maybe)),
+        tasks
     }))
 }
 
@@ -39,7 +39,8 @@ pub fn project(input: &str) -> nom::IResult<&str, Project> {
 pub(self) mod parsers {
     use nom::{combinator, bytes, branch, character, sequence, multi};
     use super::{MetaData, Task};
-    use yaml_rust::{YamlLoader};
+    use yaml_rust::YamlLoader;
+    use std::convert::TryInto;
 
     fn yaml_delimiter(input: &str) -> nom::IResult<&str, ()> {
         let (input, _) = combinator::opt(character::complete::line_ending)(input)?;
@@ -58,7 +59,7 @@ pub(self) mod parsers {
 
         // println!("debug {:?}", doc);
         let metadata = MetaData {
-            status: doc["status"].as_str().unwrap().into(),
+            status: doc["status"].as_str().unwrap().try_into().ok(),
             tags: vec![]
         };
         Ok((input, metadata))
@@ -170,8 +171,8 @@ pub(self) mod parsers {
 
         #[test]
         fn test_front_matter() {
-            let meta = "---\nstatus: bbo\ntags:\n---\no";
-            assert_eq!(front_matter(meta), Ok(("o", MetaData {status: "bbo".into(), tags: vec![]})));
+            let meta = "---\nstatus: active\ntags:\n---\no";
+            assert_eq!(front_matter(meta), Ok(("o", MetaData {status: "active".try_into().ok(), tags: vec![]})));
         }
 
         #[test]
@@ -212,6 +213,7 @@ pub(self) mod parsers {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::convert::TryInto;
 
     #[test]
     fn test_project() {
@@ -233,7 +235,7 @@ Lectures liens
 ";
         assert_eq!(project(input), Ok(("", Project {
             title: "Lectures liens".into(),
-            status: "active".into(),
+            status: "active".try_into().ok(),
             tasks: vec![
                 Task {
                     title: "taguer liens nons tagués".into(),
