@@ -1,13 +1,19 @@
 [package]
-name = "markdown-dashboard"
+name = "markdownizer"
 version = "0.1.0"
 authors = ["Henri Bourcereau <hbourcereau@atixnet.fr>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "markdownizer"
+path = "src/main.rs"
 
 [dependencies]
 clap = "2.33.0"
 nom = "5.1.0"
 yaml-rust = "0.4.3"
 chrono = "0.4.10"
+derive_more = "0.99.3"
