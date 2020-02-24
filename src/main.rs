@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     // println!("Value for directory: {}", root);
     //
     let proot = std::path::PathBuf::from(root);
-    let markdownizer = markdownizer::Markdownizer::new(proot.as_path());
+    let markdownizer = markdownizer::Markdownizer::new(&proot);
 
     // let markdownizer = markdownizer::Markdownizer::new(root);
     let plist = markdownizer.project_list().unwrap();

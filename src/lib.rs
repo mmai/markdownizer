@@ -29,23 +29,23 @@ impl From<std::io::Error> for MarkdownizerError {
 //     }
 // }
 
-pub struct Markdownizer<'a> {
-    root: &'a Path,
+pub struct Markdownizer {
+    root: PathBuf,
 }
 
 
-impl<'a> Markdownizer<'a> {
+impl Markdownizer {
     // pub fn new(root: &str) -> Markdownizer {
     //     let root = std::path::PathBuf::from(root);
     //     let root = root.as_path();
     //     Markdownizer { root: path }
     // }
-    pub fn new(root: &Path) -> Markdownizer {
-        Markdownizer { root }
+    pub fn new(root: &PathBuf) -> Markdownizer {
+        Markdownizer { root: PathBuf::from(root) }
     }
 
     pub fn project_list(&self) -> Result<Vec<types::Project>, MarkdownizerError> {
-        fs::read_dir(self.root)?.into_iter().map (|entry|
+        fs::read_dir(&self.root)?.into_iter().map (|entry|
             read_project(&entry?.path())
         ).collect()
     }
