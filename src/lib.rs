@@ -13,8 +13,8 @@ pub enum MarkdownizerError {
     #[display(fmt = "IO Error")]
     IOError,
 
-    #[display(fmt = "ParseError")]
-    ParseError,
+    #[display(fmt = "ParseError on file {} : {}", _0, _1)]
+    ParseError(String, String),
 }
 
 impl From<std::io::Error> for MarkdownizerError {
@@ -57,7 +57,7 @@ fn read_project(path: &Path) -> Result<types::Project, MarkdownizerError> {
     file.read_to_string(&mut s)?;
     match parser::project(&s) {
         Ok((_, project)) => Ok(project),
-        _ => Err(MarkdownizerError::ParseError)
+        Err(e) => Err(MarkdownizerError::ParseError(path.display().to_string(), format!("{:?}", e)))
     }
 }
 
