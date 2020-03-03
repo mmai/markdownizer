@@ -8,6 +8,8 @@ use std::convert::From;
 mod types;
 mod parser;
 
+use types::{ Stored, Project };
+
 #[derive(Debug, Display)]
 pub enum MarkdownizerError {
     #[display(fmt = "IO Error")]
@@ -44,14 +46,26 @@ impl Markdownizer {
         Markdownizer { root: PathBuf::from(root) }
     }
 
-    pub fn project_list(&self) -> Result<Vec<types::Project>, MarkdownizerError> {
-        fs::read_dir(&self.root)?.into_iter().map (|entry|
-            read_project(&entry?.path())
-        ).collect()
+    pub fn _project_list(&self) -> Result<Vec<Project>, MarkdownizerError> {
+        fs::read_dir(&self.root)?.into_iter().map (|entry|{
+            let project_path = entry?.path();
+            let project = read_project(&project_path);
+            project
+            // read_project(&entry?.path())
+        }).collect()
+    }
+
+    pub fn project_list(&self) -> Result<Vec<Stored<Project>>, MarkdownizerError> {
+        fs::read_dir(&self.root)?.into_iter().map (|entry| {
+            let location = entry?.path();
+            read_project(&location).map(|entity|
+               Stored { entity, location }
+           )
+        }).collect()
     }
 }
 
-fn read_project(path: &Path) -> Result<types::Project, MarkdownizerError> {
+fn read_project(path: &Path) -> Result<Project, MarkdownizerError> {
     let mut file = std::fs::File::open(&path)?;
     let mut s = String::new();
     file.read_to_string(&mut s)?;

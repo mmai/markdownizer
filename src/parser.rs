@@ -18,7 +18,7 @@ pub fn project(input: &str) -> nom::IResult<&str, Project> {
     Ok((input, Project {
         title: title.into(),
         status: meta.map(|m| m.status).unwrap_or(Some(Status::Maybe)),
-        tasks
+        tasks,
     }))
 }
 

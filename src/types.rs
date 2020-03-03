@@ -1,5 +1,12 @@
 use std::string::String;
 use std::convert::TryFrom;
+use std::path::{Path, PathBuf};
+
+
+pub struct Stored<Entity> {
+    pub entity: Entity,
+    pub location: PathBuf
+}
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct Project {

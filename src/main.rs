@@ -1,5 +1,7 @@
 use std::{env, error};
 use clap::{Arg, App, SubCommand};
+use pathdiff::diff_paths;
+use std::path::PathBuf;
 
 use markdownizer;
 
@@ -28,7 +30,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let matches = app.get_matches();
     let current = get_current_dir();
     let root = matches.value_of("directory").unwrap_or(&current);
-    let relative_from = matches.value_of("relative_from").unwrap_or(&current);
+    let relative_from: PathBuf = matches.value_of("relative_from").unwrap_or(&current).into();
 
 	// println!("{:?}", hello_parser("hello world"));
 	// println!("{:?}", hello_parser("goodbye hello again"));
@@ -38,11 +40,18 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let markdownizer = markdownizer::Markdownizer::new(&proot);
 
     // let markdownizer = markdownizer::Markdownizer::new(root);
-    let plist = markdownizer.project_list().unwrap();
-    for entry in plist {
-        match entry {
-            project => println!("({}) ({})", project.title, project.tasks.len()),
-            e => println!("Not a project: {:?}", e)
+    let result = markdownizer.project_list();
+    match result {
+        Ok(plist) => {
+            for stored_project in plist {
+                let project = &stored_project.entity;
+                let location = &stored_project.location;
+                let relative_path = diff_paths(location, &relative_from);
+                println!("[{}]({:?}) ({})", project.title, relative_path, project.tasks.len());
+            }
+        },
+        Err(e) => {
+            println!("Error when reading projects : {}", e);
         }
     }
 
