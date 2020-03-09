@@ -5,7 +5,7 @@ use std::io::Read;
 use derive_more::Display;
 use std::convert::From;
 
-mod types;
+pub mod types;
 mod parser;
 
 use types::{ Stored, Project };
