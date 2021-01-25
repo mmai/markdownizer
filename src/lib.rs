@@ -31,6 +31,7 @@ impl From<std::io::Error> for MarkdownizerError {
 //     }
 // }
 
+#[derive(Clone)]
 pub struct Markdownizer {
     root: PathBuf,
 }

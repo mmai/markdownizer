@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 use std::path::{Path, PathBuf};
 
 
+#[derive(Clone)]
 pub struct Stored<Entity> {
     pub entity: Entity,
     pub location: PathBuf
