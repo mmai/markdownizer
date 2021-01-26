@@ -66,7 +66,7 @@ pub(self) mod parsers {
     }
 
     pub fn description(input: &str) -> nom::IResult<&str, String> {
-        let (input, description) = bytes::complete::take_until("\n## ")(input)?;
+        let (input, description) = bytes::complete::take_until("\n## Tasks")(input)?;
         Ok((input, description.into()))
     }
 
