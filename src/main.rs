@@ -9,7 +9,7 @@ use markdownizer;
 
 fn main() -> Result<(), Box<dyn error::Error>> {
     let app = App::new("Markdownizer")
-        .version("1.0")
+        .version("0.1.0")
         .author("Henri Bourcereau <henri@bourcereau.fr>")
         .about("A markdown based GTD system manager")
         .arg(Arg::with_name("directory")
